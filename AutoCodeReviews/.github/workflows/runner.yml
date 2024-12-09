@@ -3,7 +3,7 @@ name: Run AutoCodeReview Bot
 on:
   pull_request: 
     branches: 
-      - main:
+    - main
 
 jobs:
   execute:

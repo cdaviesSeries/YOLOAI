@@ -1,9 +1,9 @@
-from typing import List
+from typing import List 
 from eudoros.text_based.main import LLMProvider
 from eudoros.text_based.openai_llm.constants import OpenAi_ModelEnum
 from eudoros.text_based.utility import MessageUtility
 
-globalPath = "/home/zigzalgo/series/centralized-pipelines-backend"
+globalPath = "/home/dougl/series/centralized-pipelines-backend"
 
 prompt = """
 Given the file, and the associated diff,
@@ -12,7 +12,7 @@ Do not discuss things like style, standards etc. Instead, focus entirely on logi
 Very specifically explicit errors, and not possible errors.
 """
 
-def handleDiff(diff: List[str]):
+def handleDiff(diff: List[str], fd):
     filePath = globalPath + diff[0].split()[2][1:]
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
@@ -22,10 +22,13 @@ def handleDiff(diff: List[str]):
 
         messages = MessageUtility.constructMessage(None, message)
         resp = prov.queryLongText(messages)
+        diffName = diff[0].split()[2][1:].replace("/","_")
 
-        with open(f"{diff[0].split()[2][1:].replace("/","_")}.md", "w") as outFile:
+        with open(f"out/{diffName}.md", "w") as outFile:
             outFile.write(resp)
-        
+            
+        fd.write((f"## {diffName}\n\n{resp}\n\n"))
+        fd.flush()
 
 def split_by_separator(lines: List[str], separator_keyword="diff"):
     result = []
@@ -47,5 +50,6 @@ def split_by_separator(lines: List[str], separator_keyword="diff"):
 
 with open("diffs.txt", 'r', encoding='utf-8') as file:
     file_content = file.readlines()
-    for x in split_by_separator(file_content):
-        handleDiff(x)
+    with open("review.md", 'w') as fd:
+        for x in split_by_separator(file_content):
+            handleDiff(x, fd)

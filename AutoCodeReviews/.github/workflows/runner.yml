@@ -1,0 +1,54 @@
+name: Run AutoCodeReview Bot
+
+on:
+  pull_request: 
+    branches: 
+      - main:
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EUDOROS_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run Diff
+      run: git diff --name-only origin/main origin/${GITHUB_HEAD_REF} > diffs.txt
+
+    - name: Run Script
+      run: python main.py
+
+    - name: Post Coverage Report
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('review.md', 'utf8');
+          const body = `# AutoCodeReview Report\n\n${coverage}\n`;
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: body
+          });

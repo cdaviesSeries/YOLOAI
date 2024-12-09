@@ -1,0 +1,258 @@
+diff --git a/app/crud/execution.py b/app/crud/execution.py
+index 82a4230..7669689 100644
+--- a/app/crud/execution.py
++++ b/app/crud/execution.py
+@@ -2,12 +2,15 @@ from typing import Any
+ 
+ from fastapi import WebSocket
+ from motor.motor_asyncio import AsyncIOMotorDatabase
+-from app.crud.pipeline import get_pipeline
+-from app.workflow_engine.execution_manager import ExecutionManager
+-from app.models.pipeline import PipelineInDB
+-from app.models.draft_pipeline import DraftPipeline
++
+ from app.crud.draft_pipeline import get_draft_pipeline
++from app.crud.pipeline import get_pipeline
++from app.db.invocation import get_invocation
+ from app.models.base import PyObjectId
++from app.models.draft_pipeline import DraftPipeline
++from app.models.pipeline import PipelineInDB
++from app.workflow_engine.execution_manager import ExecutionManager
++
+ 
+ async def execute_pipeline(websocket: WebSocket, pipeline_id: PyObjectId, identifier: str, db: AsyncIOMotorDatabase[Any], client_id: str) -> None:
+     """
+@@ -63,3 +66,41 @@ async def execute_draft_pipeline(websocket: WebSocket, user_id: PyObjectId, pipe
+     )
+ 
+     await execution_manager.execute(pipeline_data=pipeline_version.pipeline)
++
++
++async def execute_pipeline_from_state(
++    websocket: WebSocket,
++    user_id: PyObjectId,
++    pipeline_id: PyObjectId,
++    identifier: str,
++    pipeline_invocation_id: PyObjectId,
++    db: AsyncIOMotorDatabase[Any],
++    client_id: str
++) -> None:
++    """
++    Executes a pipeline from a given pipeline execution state. The state is loaded from the pipeline_invocation_history table,
++    using the pipeline_invocation_id to lookup the state
++    """
++    pipeline: PipelineInDB = await get_pipeline(pipeline_id, db)
++
++    # Resolve identifier (tag or version number)
++    version = pipeline.versionTags.get(identifier) or identifier
++    if version not in pipeline.versions:
++        raise ValueError(f"Invalid identifier '{identifier}'. Must be a valid version tag or version number.")
++
++    pipeline_version = pipeline.versions[version]
++
++    execution_manager = ExecutionManager(websocket=websocket, db=db, client_id=client_id, pipeline_id=pipeline_id, version=version, top_level=True)
++
++    # look up context using invocation id
++    pipeline_invocation = await get_invocation(pipeline_invocation_id, db)
++
++    # check if user_id matches
++    if user_id != pipeline_invocation.userId:
++        raise ValueError("Unauthorized: you are not allowed to access this pipeline invocation")
++
++    await execution_manager.execute_from_state(
++        pipeline_data=pipeline_version.pipeline,
++        stack=pipeline_invocation.executionStack,
++        variables=pipeline_invocation.globalVariables
++    )
+diff --git a/app/db/__init__.py b/app/db/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/app/db/invocation.py b/app/db/invocation.py
+new file mode 100644
+index 0000000..5e595a5
+--- /dev/null
++++ b/app/db/invocation.py
+@@ -0,0 +1,16 @@
++from motor.motor_asyncio import AsyncIOMotorDatabase
++from app.models.base import PyObjectId
++from bson import ObjectId
++from typing import Any
++from app.models.invocation import PipelineInvocationHistory
++
++
++async def get_invocation(pipeline_invocation_id: PyObjectId, db: AsyncIOMotorDatabase[Any]) -> PipelineInvocationHistory:
++    invocation_data = await db.pipeline_invocations.find_one({"_id": ObjectId(pipeline_invocation_id)})
++
++    if invocation_data is None:
++        raise ValueError("Invocation with this ID does not exist")
++
++    invocation = PipelineInvocationHistory(**invocation_data)
++
++    return invocation
+diff --git a/app/models/invocation.py b/app/models/invocation.py
+index 5b2e383..6db68cb 100644
+--- a/app/models/invocation.py
++++ b/app/models/invocation.py
+@@ -16,7 +16,7 @@ class PipelineInvocationStatus(str, Enum):
+ 
+ class PipelineInvocationHistory(BaseModel):
+     invocationId: Optional[PyObjectId] = Field(
+-        default=None, 
++        default=None,
+         alias="_id",  # Use '_id' when reading from MongoDB
+         serialization_alias="invocationId"  # Use 'invocationId' when returning JSON
+     )
+diff --git a/app/routers/v1/pipeline_execution.py b/app/routers/v1/pipeline_execution.py
+index 1ae0f03..cb9805b 100644
+--- a/app/routers/v1/pipeline_execution.py
++++ b/app/routers/v1/pipeline_execution.py
+@@ -3,7 +3,7 @@ from typing import Any
+ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+ from motor.motor_asyncio import AsyncIOMotorDatabase
+ from app.utils.logger import logger
+-from app.crud.execution import execute_pipeline, execute_draft_pipeline
++from app.crud.execution import execute_pipeline, execute_draft_pipeline, execute_pipeline_from_state
+ from app.external_services.websocket_manager import ConnectionManager
+ from app.utils.db import get_db
+ from app.models.base import PyObjectId
+@@ -57,3 +57,35 @@ async def websocket_endpoint_draft(websocket: WebSocket, pipeline_id: str, ident
+         logger.error(f"Error in websocket connection: {str(e)}", exc_info=True)
+     finally:
+         await connection_manager.disconnect(client_id)
++
++
++@router.websocket("/{pipeline_id}/identifier/{identifier}/{pipeline_invocation_id}")
++async def websocket_execute_pipeline_from_state(
++    websocket: WebSocket,
++    pipeline_id: str,
++    identifier: str,
++    pipeline_invocation_id: str,
++    db: AsyncIOMotorDatabase[Any] = Depends(get_db)
++) -> None:
++    """
++    Endpoint to start a pipeline execution from a saved execution state
++    """
++    connection_manager = ConnectionManager()
++    user_id = websocket.state.user.userId
++    client_id = f"{pipeline_id}:{identifier}:{str(user_id)}"
++
++    try:
++        await connection_manager.connect(websocket, client_id)
++        await execute_pipeline_from_state(websocket, user_id, PyObjectId(pipeline_id), identifier, PyObjectId(pipeline_invocation_id), db, client_id)
++
++        await connection_manager.send_message({"type": "completed", "data": "Pipeline execution completed"}, client_id)
++    except ValueError as e:
++        # These are actual pipeline errors that the client should know about
++        await connection_manager.send_message({"type": "error", "data": str(e)}, client_id)
++    except WebSocketDisconnect:
++        logger.info(f"Client disconnected: {client_id}")
++    except Exception as e:
++        # These are errors that shouldn't happen and are probably logic errors in the code
++        logger.error(f"Error in websocket connection: {str(e)}", exc_info=True)
++    finally:
++        await connection_manager.disconnect(client_id)
+diff --git a/app/workflow_engine/context_manager.py b/app/workflow_engine/context_manager.py
+index 03b5de0..aa5c8e3 100644
+--- a/app/workflow_engine/context_manager.py
++++ b/app/workflow_engine/context_manager.py
+@@ -98,9 +98,15 @@ class ContextManager:
+     def get_execution_stack(self) -> List[Node]:
+         return self.execution_stack
+ 
++    def set_execution_stack(self, stack: List[Node]) -> None:
++        self.execution_stack = stack
++
+     def get_global_variables(self) -> Dict[str, Any]:
+         return self.global_variables
+ 
++    def set_global_variables(self, variables: Dict[str, Any]) -> None:
++        self.global_variables = variables
++
+     def delete_global_variable(self, key: str) -> None:
+         """Remove a variable from the context manager"""
+         if key in self.global_variables:
+diff --git a/app/workflow_engine/execution_manager.py b/app/workflow_engine/execution_manager.py
+index 2d72f3f..0b4bd6c 100644
+--- a/app/workflow_engine/execution_manager.py
++++ b/app/workflow_engine/execution_manager.py
+@@ -1,6 +1,6 @@
+ import os
+ from datetime import datetime
+-from typing import Any, Dict, Optional
++from typing import Any, Dict, Optional, List
+ 
+ from bson import ObjectId
+ from fastapi import WebSocket
+@@ -57,6 +57,22 @@ class ExecutionManager:
+ 
+         return return_val
+ 
++    async def execute_from_state(self, pipeline_data: FrontEndPipeline, stack: List[Node], variables: Dict[str, Any]) -> Optional[Any]:
++        """
++        Executes a pipeline with a given execution context
++        """
++        parser = Parser()
++        pipeline = parser.parse_client_data(pipeline_data)
++        self._setup_execution_context(pipeline, self.websocket, self.client_id)
++
++        # load context
++        self._override_all_global_variables(variables)
++        self._override_execution_stack(stack)
++
++        return_val = await self._execute_pipeline()
++
++        return return_val
++
+     async def _insert_pipeline_invocation_history(
+         self, status: PipelineInvocationStatus, success: bool | None, update_id: Optional[PyObjectId] = None
+     ) -> str:
+@@ -145,14 +161,23 @@ class ExecutionManager:
+ 
+         return
+ 
++    def _override_all_global_variables(self, overrides: Dict[str, Any]) -> None:
++        """
++        Overrides all global variables with the given overrides
++        """
++        if not self.context_manager:
++            raise Exception("Context manager not initialized")
++
++        self.context_manager.set_global_variables(overrides)
++
+     def _override_global_variables(self, overrides: Dict[str, Any]) -> None:
+         """
+         Overrides global variables with the given overrides
++        overrides only matching vars
+         """
+         if not self.context_manager:
+             raise Exception("Context manager not initialized")
+ 
+-        # for var_id, var_name in overrides.items():
+         for var in self.context_manager.get_global_variables():
+             var_name = var.split(":")[-1]
+             if var_name in overrides:
+@@ -168,6 +193,15 @@ class ExecutionManager:
+         for param_name, param_value in overrides.items():
+             self.context_manager.set_global_parameter(param_name, param_value)
+ 
++    def _override_execution_stack(self, overrides: List[Node]) -> None:
++        """
++        Overrides the execution stack
++        """
++        if not self.context_manager:
++            raise Exception("Context manager not initialized")
++
++        self.context_manager.set_execution_stack(overrides)
++
+     async def _execute_pipeline(self) -> Optional[Any]:
+         """
+         executes a pipeline by executing nodes on the execution stack until the stack is empty
+@@ -191,7 +225,7 @@ class ExecutionManager:
+                     {
+                         "type": "info",
+                         "data": f"Executed node {node.id}, context: {self.context_manager.get_global_variables()}",
+-                        "node_id": node.id,
++                        "node_id": node.name,
+                         "success": True,
+                         "node_invocation_id": node_invocation_record_id,
+                     }

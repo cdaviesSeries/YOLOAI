@@ -29,7 +29,7 @@ jobs:
         ssh-keyscan github.com >> ~/.ssh/known_hosts
 
     - name: Install dependencies
-      run: pip install -r AutoCodeReviews/requirements.txt
+      run: pip install -r requirements.txt
 
     - name: Run Diff
       run: git diff --name-only origin/main origin/${GITHUB_HEAD_REF} > diffs.txt

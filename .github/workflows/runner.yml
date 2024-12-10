@@ -27,7 +27,6 @@ jobs:
         echo "${{ secrets.EUDOROS_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan github.com >> ~/.ssh/known_hosts
-        export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
 
     - name: Install dependencies
       run: pip install -r AutoCodeReviews/requirements.txt
@@ -45,6 +44,7 @@ jobs:
     - name: Run Script
       run: |
         cd AutoCodeReviews
+        export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         env | grep OPEN
         python main.py ../diffs.txt $GITHUB_WORKSPACE
 

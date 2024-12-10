@@ -42,7 +42,9 @@ jobs:
         pwd
 
     - name: Run Script
-      run: python main.py
+      run: |
+        cd AutoCodeReviews
+        python main.py
 
     - name: Post Coverage Report
       uses: actions/github-script@v6

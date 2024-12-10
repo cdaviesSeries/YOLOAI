@@ -34,10 +34,12 @@ jobs:
     - name: Run Diff
       run: |
         cd $GITHUB_WORKSPACE
+        pwd
         ls -a
         git fetch origin main
         git diff origin/main > ../diffs.txt
         cd ..
+        pwd
 
     - name: Run Script
       run: python main.py

@@ -17,6 +17,7 @@ Very specifically explicit errors, and not possible errors.
 def handleDiff(diff: List[str], fd, gitRoot):
     curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
     filePath = curPath + diff[0].split()[2][1:]
+    print(f"diffing file: {filePath}... ", end='')
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
         prov = LLMProvider().create_llm_client(OpenAi_ModelEnum.GPT_O_1_PREVIEW.name)
@@ -27,8 +28,10 @@ def handleDiff(diff: List[str], fd, gitRoot):
         resp = prov.queryLongText(messages)
         diffName = diff[0].split()[2][1:].replace("/","_")
 
-        with open(f"out/{diffName}.md", "w") as outFile:
-            outFile.write(resp)
+        # with open(f"out/{diffName}.md", "w") as outFile:
+        #     outFile.write(resp)
+
+        print("done.")
             
         fd.write((f"## {diffName}\n\n{resp}\n\n"))
         fd.flush()

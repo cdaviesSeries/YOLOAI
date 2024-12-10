@@ -45,6 +45,7 @@ jobs:
     - name: Run Script
       run: |
         cd AutoCodeReviews
+        env | grep OPEN
         python main.py ../diffs.txt $GITHUB_WORKSPACE
 
     - name: Post Coverage Report

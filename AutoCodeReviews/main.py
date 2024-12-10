@@ -2,6 +2,8 @@ from typing import List
 from eudoros.text_based.main import LLMProvider
 from eudoros.text_based.openai_llm.constants import OpenAi_ModelEnum
 from eudoros.text_based.utility import MessageUtility
+import sys
+import os
 
 globalPath = "/home/dougl/series/centralized-pipelines-backend"
 
@@ -12,8 +14,9 @@ Do not discuss things like style, standards etc. Instead, focus entirely on logi
 Very specifically explicit errors, and not possible errors.
 """
 
-def handleDiff(diff: List[str], fd):
-    filePath = globalPath + diff[0].split()[2][1:]
+def handleDiff(diff: List[str], fd, gitRoot):
+    curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
+    filePath = curPath + diff[0].split()[2][1:]
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
         prov = LLMProvider().create_llm_client(OpenAi_ModelEnum.GPT_O_1_PREVIEW.name)
@@ -48,8 +51,9 @@ def split_by_separator(lines: List[str], separator_keyword="diff"):
 
     return result
 
-with open("diffs.txt", 'r', encoding='utf-8') as file:
+print(sys.argv)
+with open(sys.argv[1], 'r', encoding='utf-8') as file:
     file_content = file.readlines()
     with open("review.md", 'w') as fd:
         for x in split_by_separator(file_content):
-            handleDiff(x, fd)
+            handleDiff(x, fd, sys.argv[2])

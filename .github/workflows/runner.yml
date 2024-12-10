@@ -27,6 +27,7 @@ jobs:
         echo "${{ secrets.EUDOROS_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan github.com >> ~/.ssh/known_hosts
+        export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
 
     - name: Install dependencies
       run: pip install -r AutoCodeReviews/requirements.txt
@@ -37,14 +38,14 @@ jobs:
         pwd
         ls -a
         git fetch origin main
-        git diff origin/main > ../diffs.txt
+        git diff origin/main > diffs.txt
         cd ..
         pwd
 
     - name: Run Script
       run: |
         cd AutoCodeReviews
-        python main.py
+        python main.py ../diffs.txt
 
     - name: Post Coverage Report
       uses: actions/github-script@v6

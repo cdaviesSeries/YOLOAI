@@ -20,7 +20,7 @@ def handleDiff(diff: List[str], fd, gitRoot):
     print(f"diffing file: {filePath}... ", end='')
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
-        prov = LLMProvider().create_llm_client(OpenAi_ModelEnum.GPT_O_1_PREVIEW.name)
+        prov = LLMProvider().create_llm_client(OpenAi_ModelEnum.GPT4_O_MINI.name)
 
         message= prompt + "\nFile:\n```" + file_content+" \n```" + "\nDiff:\n```" + "".join(diff)+ "\n```"
 

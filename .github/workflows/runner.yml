@@ -36,7 +36,8 @@ jobs:
         cd $GITHUB_WORKSPACE
         ls -a
         git fetch origin main
-        git diff origin/main > diffs.txt
+        git diff origin/main > ../diffs.txt
+        cd ..
 
     - name: Run Script
       run: python main.py

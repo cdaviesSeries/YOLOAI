@@ -34,6 +34,7 @@ jobs:
     - name: Run Diff
       run: |
         cd $GITHUB_WORKSPACE
+        ls -a
         git fetch origin main
         git diff origin/main origin/${GITHUB_HEAD_REF} > diffs.txt
 

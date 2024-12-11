@@ -46,7 +46,7 @@ jobs:
         cd AutoCodeReviews
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         env | grep OPEN
-        python main.py ../diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.md
+        python main.py ../diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
 
     - name: Post Coverage Report
       uses: actions/github-script@v6
@@ -54,12 +54,20 @@ jobs:
       with:
         script: |
           const fs = require('fs');
-          const coverage = fs.readFileSync('${{ github.workspace }}/review.md', 'utf8');
+          const reviews = JSON.parse(fs.readFileSync('${{ github.workspace }}/review.json', 'utf8'));
           const body = `# AutoCodeReview Report\n\n${coverage}\n`;
           
+          await github.rest.pulls.createReview({
+            commit_id: tmp,
+            body: "ACR TEMP REVIEW",
+            event: "COMMENT",
+            comments: reviews,
+          });
+
           await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
             body: body
           });
+

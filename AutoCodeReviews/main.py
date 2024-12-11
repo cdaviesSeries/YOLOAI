@@ -1,9 +1,13 @@
-from typing import List 
+import json
+from typing import Any, Iterable, List, cast
 from eudoros.text_based.main import LLMProvider
-from eudoros.text_based.openai_llm.constants import OpenAi_ModelEnum
 from eudoros.text_based.utility import MessageUtility
+from eudoros.text_based.openai_sdk.client import OpenAiClient
+from openai.types.chat import ChatCompletionUserMessageParam
 import sys
 import os
+
+from pydantic import BaseModel
 
 globalPath = "/home/dougl/series/centralized-pipelines-backend"
 
@@ -14,27 +18,55 @@ Do not discuss things like style, standards etc. Instead, focus entirely on logi
 Very specifically explicit errors, and not possible errors.
 """
 
+class Comment(BaseModel):
+    line_number: int
+    short_summary: str
+
+class FileIssues(BaseModel):
+    issues: List[Comment]
+
+class IssuesOutput(BaseModel):
+    filepath: str
+    issuesList: FileIssues
+class AllIssues(BaseModel):
+    fileList: List[IssuesOutput]
+
+
 def handleDiff(diff: List[str], fd, gitRoot):
     curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
     filePath = curPath + diff[0].split()[2][1:]
-    print(f"diffing file: {filePath}... ", end='')
+    print(f"diffing file: {filePath}... ", end='', flush=True)
+
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
-        prov = LLMProvider().create_llm_client(OpenAi_ModelEnum.GPT4_O_MINI.name)
+        prov =LLMProvider.create_llm_client("gpt4o")
 
         message= prompt + "\nFile:\n```" + file_content+" \n```" + "\nDiff:\n```" + "".join(diff)+ "\n```"
 
-        messages = MessageUtility.constructMessage(None, message)
-        resp = prov.queryLongText(messages)
-        diffName = diff[0].split()[2][1:].replace("/","_")
+        messages = cast(Iterable[ChatCompletionUserMessageParam], MessageUtility.constructMessage(message, None))
+        if (isinstance(prov, OpenAiClient)):
+            resp = prov.queryStructured(messages, FileIssues)
+        content = json.loads(resp[0].message.content)
 
-        # with open(f"out/{diffName}.md", "w") as outFile:
-        #     outFile.write(resp)
+        retval = []
+        for x in content['issues']:
+            retval.append({
+                "path": filePath,
+                "line": x['line_number'],
+                "side": "RIGHT",
+                "body": x['short_summary'],
+            })
+
+             
+        # diffName = diff[0].split()[2][1:].replace("/","_")
 
         print("done.")
             
-        fd.write((f"## {diffName}\n\n{resp}\n\n"))
-        fd.flush()
+        # fd.write((f"## {diffName}\n\n{resp}\n\n"))
+        # fd.flush()
+        # return IssuesOutput(filepath=filePath, issuesList=FileIssues(**content))
+        return retval
+        
 
 def split_by_separator(lines: List[str], separator_keyword="diff"):
     result = []
@@ -58,5 +90,10 @@ print(sys.argv)
 with open(sys.argv[1], 'r', encoding='utf-8') as file:
     file_content = file.readlines()
     with open(sys.argv[3], 'w') as fd:
+        retval = []
         for x in split_by_separator(file_content):
-            handleDiff(x, fd, sys.argv[2])
+            retval.extend(handleDiff(x, fd, sys.argv[2]))
+        
+        json.dump(retval, fd)
+
+

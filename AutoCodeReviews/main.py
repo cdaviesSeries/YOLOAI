@@ -57,6 +57,6 @@ def split_by_separator(lines: List[str], separator_keyword="diff"):
 print(sys.argv)
 with open(sys.argv[1], 'r', encoding='utf-8') as file:
     file_content = file.readlines()
-    with open("review.md", 'w') as fd:
+    with open(sys.argv[3], 'w') as fd:
         for x in split_by_separator(file_content):
             handleDiff(x, fd, sys.argv[2])

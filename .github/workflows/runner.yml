@@ -34,18 +34,13 @@ jobs:
     - name: Run Diff
       run: |
         cd $GITHUB_WORKSPACE
-        pwd
-        ls -a
         git fetch origin main
         git diff origin/main > diffs.txt
-        cd ..
-        pwd
 
     - name: Run Script
       run: |
         cd AutoCodeReviews
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
-        env | grep OPEN
         python main.py ../diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
 
     - name: Post Coverage Report
@@ -55,15 +50,34 @@ jobs:
         script: |
           const fs = require('fs');
           const reviews = JSON.parse(fs.readFileSync('${{ github.workspace }}/review.json', 'utf8'));
-          console.log(reviews);
+          const botUser = 'github-actions[bot]'; // GitHub Actions user
+
+          if (reviews.length > 0) {
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            console.log(reviews.data);
+
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              commit_id: '${{ github.event.pull_request.head.sha }}',
+              body: "I found a couple of issues, see these comments.",
+              event: "COMMENT",
+              comments: reviews,
+            });
+          } else {
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              commit_id: '${{ github.event.pull_request.head.sha }}',
+              body: "LGTM!",
+              event: "COMMENT",
+          }
           
-          await github.rest.pulls.createReview({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: context.payload.pull_request.number,
-            commit_id: '${{ github.event.pull_request.head.sha }}',
-            body: "ACR TEMP REVIEW",
-            event: "COMMENT",
-            comments: reviews,
-          });
 

@@ -1,5 +1,5 @@
 import json
-from typing import Any, Iterable, List, cast
+from typing import  Iterable, List, cast
 from eudoros.text_based.main import LLMProvider
 from eudoros.text_based.utility import MessageUtility
 from eudoros.text_based.openai_sdk.client import OpenAiClient
@@ -45,9 +45,6 @@ def handleDiff(diff: List[str], gitRoot):
 
         message= prompt + "\nFile:\n```" + file_content+" \n```" + "\nDiff:\n```" + "".join(diff)+ "\n```"
 
-        with open('tmp', 'w') as log:
-            log.write(message)
-
         messages = cast(Iterable[ChatCompletionUserMessageParam], MessageUtility.constructMessage(message, None))
         if (isinstance(prov, OpenAiClient)):
             resp = prov.queryStructured(messages, FileIssues)
@@ -72,11 +69,8 @@ def handleDiff(diff: List[str], gitRoot):
                     break
             # after enumerate
             if not found: 
-                print("not found")
-                print("\n")
+                print(f"issue: `{issue['problem_code']}` not found.")
             
-                    
-
         print("done.")
         return retval
         

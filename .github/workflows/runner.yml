@@ -55,7 +55,6 @@ jobs:
         script: |
           const fs = require('fs');
           const reviews = JSON.parse(fs.readFileSync('${{ github.workspace }}/review.json', 'utf8'));
-          const body = `# AutoCodeReview Report\n\n${coverage}\n`;
           
           await github.rest.pulls.createReview({
             commit_id: tmp,

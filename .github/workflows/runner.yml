@@ -78,6 +78,7 @@ jobs:
               commit_id: '${{ github.event.pull_request.head.sha }}',
               body: "LGTM!",
               event: "COMMENT",
+            })
           }
           
 

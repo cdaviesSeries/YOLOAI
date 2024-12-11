@@ -59,7 +59,9 @@ def handleDiff(diff: List[str], gitRoot):
         for issue in content['issues']:
             found = False
             print(issue)
-            for i, line in enumerate(diff):
+            # [4:] because we have to trim some info from the start of the diff
+            # largely, the names of the files being diffed.
+            for i, line in enumerate(diff[4:]): 
                 if issue['problem_code'] in line:
                     found = True
                     retval.append({

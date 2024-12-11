@@ -16,12 +16,12 @@ Given the file, and the associated diff,
 review the code as if you were doing a pull request review. 
 Do not discuss things like style, standards etc. Instead, focus entirely on logical errors such as bugs.
 Very specifically explicit errors, and not possible errors.
-Provide the position relative to the diff only, ignoring the line counts of both this prompt and the file.
+Include the entire line of code where the error is verbatim in the response.
 """
 
 class Comment(BaseModel):
-    position: int
     short_summary: str
+    problem_code: str
 
 class FileIssues(BaseModel):
     issues: List[Comment]
@@ -54,14 +54,18 @@ def handleDiff(diff: List[str], gitRoot):
         if resp:
             content = json.loads(resp[0].message.content if resp[0].message.content else "")
             
-
+        # regex bs
         retval = []
-        for x in content['issues']:
-            retval.append({
-                "path": relFilePath,
-                "position": x['position'],
-                "body": x['short_summary'],
-            })
+        for issue in content['issues']:
+            for i, line in enumerate(diff):
+                if issue in line:
+                    retval.append({
+                        "path": relFilePath,
+                        "position": i,
+                        "body": issue['short_summary'],
+                    })
+                    break
+                    
 
         print("done.")
         return retval

@@ -16,6 +16,7 @@ Given the file, and the associated diff,
 review the code as if you were doing a pull request review. 
 Do not discuss things like style, standards etc. Instead, focus entirely on logical errors such as bugs.
 Very specifically explicit errors, and not possible errors.
+Provide line numbers relative to the file only, ignoring the line counts of both this prompt and the diff file.
 """
 
 class Comment(BaseModel):
@@ -32,7 +33,7 @@ class AllIssues(BaseModel):
     fileList: List[IssuesOutput]
 
 
-def handleDiff(diff: List[str], fd, gitRoot):
+def handleDiff(diff: List[str], gitRoot):
     curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
     relFilePath = diff[0].split()[2][2:]
     filePath = os.path.join(curPath, relFilePath)
@@ -40,14 +41,19 @@ def handleDiff(diff: List[str], fd, gitRoot):
 
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
-        prov =LLMProvider.create_llm_client("gpt4o")
+        prov =LLMProvider.create_llm_client("gpt4m")
 
         message= prompt + "\nFile:\n```" + file_content+" \n```" + "\nDiff:\n```" + "".join(diff)+ "\n```"
+
+        with open('tmp', 'w') as log:
+            log.write(message)
 
         messages = cast(Iterable[ChatCompletionUserMessageParam], MessageUtility.constructMessage(message, None))
         if (isinstance(prov, OpenAiClient)):
             resp = prov.queryStructured(messages, FileIssues)
-        content = json.loads(resp[0].message.content)
+        if resp:
+            content = json.loads(resp[0].message.content if resp[0].message.content else "")
+            
 
         retval = []
         for x in content['issues']:
@@ -64,7 +70,7 @@ def handleDiff(diff: List[str], fd, gitRoot):
 
 def split_by_separator(lines: List[str], separator_keyword="diff"):
     result = []
-    current_group = []
+    current_group: List[str] = []
 
     for line in lines:
         if line.startswith(separator_keyword):
@@ -86,7 +92,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as file:
     with open(sys.argv[3], 'w') as fd:
         retval = []
         for x in split_by_separator(file_content):
-            retval.extend(handleDiff(x, fd, sys.argv[2]))
+            retval.extend(handleDiff(x, sys.argv[2]))
         
         json.dump(retval, fd)
 

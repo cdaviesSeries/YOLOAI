@@ -37,7 +37,7 @@ def handleDiff(diff: List[str], gitRoot):
     curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
     relFilePath = diff[0].split()[2][2:]
     filePath = os.path.join(curPath, relFilePath)
-    print(f"diffing file: {filePath}... ", end='', flush=True)
+    print(f"diffing file: {filePath}... ")
 
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
@@ -58,6 +58,7 @@ def handleDiff(diff: List[str], gitRoot):
         retval = []
         for issue in content['issues']:
             found = False
+            print(issue)
             for i, line in enumerate(diff):
                 if issue['problem_code'] in line:
                     found = True
@@ -69,7 +70,8 @@ def handleDiff(diff: List[str], gitRoot):
                     break
             # after enumerate
             if not found: 
-                print(f"\n{issue}")
+                print("not found")
+                print("\n")
             
                     
 

@@ -16,11 +16,11 @@ Given the file, and the associated diff,
 review the code as if you were doing a pull request review. 
 Do not discuss things like style, standards etc. Instead, focus entirely on logical errors such as bugs.
 Very specifically explicit errors, and not possible errors.
-Provide line numbers relative to the file only, ignoring the line counts of both this prompt and the diff file.
+Provide the position relative to the diff only, ignoring the line counts of both this prompt and the file.
 """
 
 class Comment(BaseModel):
-    line_number: int
+    position: int
     short_summary: str
 
 class FileIssues(BaseModel):
@@ -59,8 +59,7 @@ def handleDiff(diff: List[str], gitRoot):
         for x in content['issues']:
             retval.append({
                 "path": relFilePath,
-                "line": x['line_number'],
-                "side": "RIGHT",
+                "position": x['position'],
                 "body": x['short_summary'],
             })
 

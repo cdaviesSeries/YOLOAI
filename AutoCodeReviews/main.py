@@ -57,14 +57,20 @@ def handleDiff(diff: List[str], gitRoot):
         # regex bs
         retval = []
         for issue in content['issues']:
+            found = False
             for i, line in enumerate(diff):
                 if issue['problem_code'] in line:
+                    found = True
                     retval.append({
                         "path": relFilePath,
                         "position": i,
                         "body": issue['short_summary'],
                     })
                     break
+            # after enumerate
+            if not found: 
+                print(f"\n{issue}")
+            
                     
 
         print("done.")

@@ -53,32 +53,44 @@ jobs:
           const botUser = 'github-actions[bot]'; // GitHub Actions user
 
           if (reviews.length > 0) {
-            const reviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-            });
-            console.log(reviews.data);
+              const existingReviews = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.pull_request.number,
+              });
+
+              for (const curReview of existingReviews.data) {
+                if (curReview.user.login === botUser) {
+                  console.log(`Dismissing review #${curReview.id} by ${botUser}`);
+                  await github.rest.pulls.dismissReview({
+                    owner,
+                    repo,
+                    pull_number,
+                    review_id: curReview.id,
+                  });
+                }
+              }
 
 
-            await github.rest.pulls.createReview({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              commit_id: '${{ github.event.pull_request.head.sha }}',
-              body: "I found a couple of issues, see these comments.",
-              event: "COMMENT",
-              comments: reviews,
-            });
+              await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.pull_request.number,
+                  commit_id: '${{ github.event.pull_request.head.sha }}',
+                  body: "I found a couple of issues, see these comments.",
+                  event: "COMMENT",
+                  comments: reviews,
+              });
+
           } else {
-            await github.rest.pulls.createReview({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              commit_id: '${{ github.event.pull_request.head.sha }}',
-              body: "LGTM!",
-              event: "COMMENT",
-            })
+              await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.pull_request.number,
+                  commit_id: '${{ github.event.pull_request.head.sha }}',
+                  body: "LGTM!",
+                  event: "COMMENT",
+              })
           }
           
 

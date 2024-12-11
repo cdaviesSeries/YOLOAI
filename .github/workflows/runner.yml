@@ -60,7 +60,7 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             pull_number: context.payload.pull_request.number,
-            commit_id:  ${{ github.event.pull_request.head.sha }},
+            commit_id: '${{ github.event.pull_request.head.sha }}',
             body: "ACR TEMP REVIEW",
             event: "COMMENT",
             comments: reviews,

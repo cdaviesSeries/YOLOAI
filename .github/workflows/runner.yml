@@ -46,7 +46,7 @@ jobs:
         cd AutoCodeReviews
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         env | grep OPEN
-        python main.py ../diffs.txt $GITHUB_WORKSPACE /review.md
+        python main.py ../diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.md
 
     - name: Post Coverage Report
       uses: actions/github-script@v6
@@ -54,7 +54,7 @@ jobs:
       with:
         script: |
           const fs = require('fs');
-          const coverage = fs.readFileSync('/review.md', 'utf8');
+          const coverage = fs.readFileSync('$GITHUB_WORKSPACE/review.md', 'utf8');
           const body = `# AutoCodeReview Report\n\n${coverage}\n`;
           
           await github.rest.issues.createComment({

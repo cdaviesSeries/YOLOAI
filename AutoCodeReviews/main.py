@@ -34,7 +34,9 @@ class AllIssues(BaseModel):
 
 def handleDiff(diff: List[str], fd, gitRoot):
     curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
-    filePath = curPath + diff[0].split()[2][1:]
+    relFilePath = diff[0].split()[2][2:]
+    filePath = os.path.join(curPath, relFilePath)
+    print(f"diff path from diff obj arg: {relFilePath}")
     print(f"diffing file: {filePath}... ", end='', flush=True)
 
     with open(filePath, 'r', encoding='utf-8') as file:
@@ -51,7 +53,7 @@ def handleDiff(diff: List[str], fd, gitRoot):
         retval = []
         for x in content['issues']:
             retval.append({
-                "path": filePath,
+                "path": relFilePath,
                 "line": x['line_number'],
                 "side": "RIGHT",
                 "body": x['short_summary'],

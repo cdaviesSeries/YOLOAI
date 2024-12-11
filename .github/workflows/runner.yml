@@ -55,6 +55,7 @@ jobs:
         script: |
           const fs = require('fs');
           const reviews = JSON.parse(fs.readFileSync('${{ github.workspace }}/review.json', 'utf8'));
+          console.log(reviews);
           
           await github.rest.pulls.createReview({
             owner: context.repo.owner,

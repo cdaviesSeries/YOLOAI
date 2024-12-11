@@ -36,7 +36,6 @@ def handleDiff(diff: List[str], fd, gitRoot):
     curPath = gitRoot if (os.path.isdir(gitRoot)) else globalPath
     relFilePath = diff[0].split()[2][2:]
     filePath = os.path.join(curPath, relFilePath)
-    print(f"diff path from diff obj arg: {relFilePath}")
     print(f"diffing file: {filePath}... ", end='', flush=True)
 
     with open(filePath, 'r', encoding='utf-8') as file:
@@ -59,14 +58,7 @@ def handleDiff(diff: List[str], fd, gitRoot):
                 "body": x['short_summary'],
             })
 
-             
-        # diffName = diff[0].split()[2][1:].replace("/","_")
-
         print("done.")
-            
-        # fd.write((f"## {diffName}\n\n{resp}\n\n"))
-        # fd.flush()
-        # return IssuesOutput(filepath=filePath, issuesList=FileIssues(**content))
         return retval
         
 

@@ -58,7 +58,7 @@ def handleDiff(diff: List[str], gitRoot):
         retval = []
         for issue in content['issues']:
             for i, line in enumerate(diff):
-                if issue in line:
+                if issue['problem_code'] in line:
                     retval.append({
                         "path": relFilePath,
                         "position": i,

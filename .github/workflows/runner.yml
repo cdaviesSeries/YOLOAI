@@ -67,6 +67,7 @@ jobs:
                     repo: context.repo.repo,
                     pull_number: context.payload.pull_request.number,
                     review_id: curReview.id,
+                    message: "Dismissing my previous review because of an update to this PR."
                   });
                 }
               }

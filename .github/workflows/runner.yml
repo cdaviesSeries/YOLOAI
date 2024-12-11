@@ -51,11 +51,9 @@ jobs:
     - name: Post Coverage Report
       uses: actions/github-script@v6
       if: github.event_name == 'pull_request'
+      run: pwd
       with:
         script: |
-          exec('pwd', (err, stdout, stderr) => {
-            console.log(stdout);
-          });
           const fs = require('fs');
           const coverage = fs.readFileSync('review.md', 'utf8');
           const body = `# AutoCodeReview Report\n\n${coverage}\n`;

@@ -63,9 +63,9 @@ jobs:
                 if (curReview.user.login === botUser) {
                   console.log(`Dismissing review #${curReview.id} by ${botUser}`);
                   await github.rest.pulls.dismissReview({
-                    owner,
-                    repo,
-                    pull_number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: context.payload.pull_request.number,
                     review_id: curReview.id,
                   });
                 }

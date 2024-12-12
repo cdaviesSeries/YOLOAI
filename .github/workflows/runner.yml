@@ -32,6 +32,8 @@ jobs:
 
     - name: Set up SSH key
       run: |
+        echo "workspace"
+        echo $GITHUB_WORKSPACE
         find -type d -name 'eudoros'
         mkdir -p ~/.ssh
         echo "${{ secrets.EUDOROS_SSH_KEY }}" > ~/.ssh/id_rsa
@@ -46,6 +48,8 @@ jobs:
     - name: Run Diff
       run: |
         cd $GITHUB_WORKSPACE/pr
+        echo "workspace"
+        echo $GITHUB_WORKSPACE
         git fetch origin main
         git diff origin/main > $GITHUB_WORKSPACE/diffs.txt
         head --lines=10 $GITHUB_WORKSPACE/diffs.txt
@@ -53,6 +57,8 @@ jobs:
     - name: Get Comments From OpenAI
       run: |
         cd $GITHUB_WORKSPACE/eudoros/src/eudoros/tools/autoCodeReview
+        echo "workspace"
+        echo $GITHUB_WORKSPACE
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE/pr $GITHUB_WORKSPACE/review.json
 

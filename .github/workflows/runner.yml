@@ -54,7 +54,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/eudoros/src/eudoros/bots/autoCodeReview
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
-        python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
+        python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE/pr $GITHUB_WORKSPACE/review.json
 
     - name: Create the PR
       uses: actions/github-script@v6

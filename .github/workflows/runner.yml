@@ -22,7 +22,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: series-ai/eudoros
-        token: ${{ secrets.EUDOROS_SSH_KEY }}
+        ssh-key: ${{ secrets.EUDOROS_SSH_KEY }}
         path: eudoros
 
     - name: Set up Python 3.12

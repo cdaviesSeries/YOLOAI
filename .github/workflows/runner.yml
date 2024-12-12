@@ -60,4 +60,4 @@ jobs:
       with:
         script: |
           const autoFunc = require('${{ github.workspace }}/eudoros/src/eudoros/tools/autoCodeReview/automateReview.js');
-          autoFunc.automateReview();
+          autoFunc.automateReview(context, ${{ github.event.pull_request.head.sha }}, ${{ github.workspace }});

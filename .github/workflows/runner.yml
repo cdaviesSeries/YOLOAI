@@ -40,7 +40,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd pr
+        cd $GITHUB_WORKSPACE/pr
         pip install -r AutoCodeReviews/requirements.txt
 
     - name: Run Diff
@@ -52,7 +52,7 @@ jobs:
 
     - name: Get Comments From OpenAI
       run: |
-        cd eudoros/src/eudoros/bots/AutoCodeReview
+        cd $GITHUB_WORKSPACE/eudoros/src/eudoros/bots/AutoCodeReview
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
 

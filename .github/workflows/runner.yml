@@ -11,10 +11,19 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
-
+  
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
+      with:
+        path: pr
+
+    - name: Checkout Eudoros
+      uses: actions/checkout@v4
+      with:
+        repository: series-ai/eudoros
+        token: ${{ secrets.EUDOROS_SSH_KEY }}
+        path: eudoros
 
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
@@ -23,30 +32,35 @@ jobs:
 
     - name: Set up SSH key
       run: |
+        find -type d -name 'eudoros'
         mkdir -p ~/.ssh
         echo "${{ secrets.EUDOROS_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan github.com >> ~/.ssh/known_hosts
 
     - name: Install dependencies
-      run: pip install -r AutoCodeReviews/requirements.txt
+      run: |
+        cd pr
+        pip install -r AutoCodeReviews/requirements.txt
 
     - name: Run Diff
       run: |
-        cd $GITHUB_WORKSPACE
+        cd $GITHUB_WORKSPACE/pr
         git fetch origin main
-        git diff origin/main > diffs.txt
+        git diff origin/main > $GITHUB_WORKSPACE/diffs.txt
+        head --lines=10 $GITHUB_WORKSPACE/diffs.txt
 
     - name: Get Comments From OpenAI
       run: |
-        cd AutoCodeReviews
+        cd eudoros/src/eudoros/bots/AutoCodeReview
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
-        python main.py ../diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
+        python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
 
     - name: Create the PR
       uses: actions/github-script@v6
       if: github.event_name == 'pull_request'
       with:
         script: |
+          console.log(context);
           const autoFunc = require('automateReview');
           autoFunc.automateReview();

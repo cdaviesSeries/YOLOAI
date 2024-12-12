@@ -52,7 +52,7 @@ jobs:
 
     - name: Get Comments From OpenAI
       run: |
-        cd $GITHUB_WORKSPACE/eudoros/src/eudoros/bots/AutoCodeReview
+        cd $GITHUB_WORKSPACE/eudoros/src/eudoros/bots/autoCodeReview
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE $GITHUB_WORKSPACE/review.json
 

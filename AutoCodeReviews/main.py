@@ -41,7 +41,7 @@ def handleDiff(diff: List[str], gitRoot):
 
     with open(filePath, 'r', encoding='utf-8') as file:
         file_content = file.read()
-        prov =LLMProvider.create_llm_client("gpt4m")
+        prov =LLMProvider.create_llm_client("gpt4m", configuration={"timeout": 10})
 
         message= prompt + "\nFile:\n```" + file_content+" \n```" + "\nDiff:\n```" + "".join(diff)+ "\n```"
 

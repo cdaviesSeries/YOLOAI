@@ -37,7 +37,7 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-    - name: Install dependencies
+    - name: Install Dependencies
       run: |
         cd $GITHUB_WORKSPACE/pr
         pip install -r AutoCodeReviews/requirements.txt
@@ -48,16 +48,18 @@ jobs:
         git fetch origin main
         git diff origin/main > $GITHUB_WORKSPACE/diffs.txt
 
-    - name: Get Comments From OpenAI
+    - name: LLM Review
       run: |
         cd $GITHUB_WORKSPACE/eudoros/src/eudoros/tools/autoCodeReview
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
-        python main.py $GITHUB_WORKSPACE/diffs.txt $GITHUB_WORKSPACE/pr $GITHUB_WORKSPACE/review.json
+        python main.py -d $GITHUB_WORKSPACE/diffs.txt -p $GITHUB_WORKSPACE/pr -o $GITHUB_WORKSPACE/review.json
+      continue-on-error: true
 
-    - name: Create the PR
+    - name: Create Review
       uses: actions/github-script@v6
-      if: github.event_name == 'pull_request'
+      if: steps.LLM_Review.outcome == 'success' && github.event_name == 'pull_request'
       with:
         script: |
           const autoFunc = require('${{ github.workspace }}/eudoros/src/eudoros/tools/autoCodeReview/automateReview.js');
           autoFunc.automateReview(context, github, "${{github.event.pull_request.head.sha}}", "${{ github.workspace }}");
+      continue-on-error: true

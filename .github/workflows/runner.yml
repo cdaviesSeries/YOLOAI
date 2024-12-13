@@ -49,6 +49,7 @@ jobs:
         git diff origin/main > $GITHUB_WORKSPACE/diffs.txt
 
     - name: LLM Review
+      id: llm_review
       run: |
         cd $GITHUB_WORKSPACE/eudoros/src/eudoros/tools/autoCodeReview
         export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
@@ -57,7 +58,7 @@ jobs:
 
     - name: Create Review
       uses: actions/github-script@v6
-      if: steps.LLM_Review.outcome == 'success' && github.event_name == 'pull_request'
+      if: steps.llm_review.outcome == 'success' && github.event_name == 'pull_request'
       with:
         script: |
           const autoFunc = require('${{ github.workspace }}/eudoros/src/eudoros/tools/autoCodeReview/automateReview.js');
